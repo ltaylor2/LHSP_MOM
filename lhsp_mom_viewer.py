@@ -16,7 +16,16 @@ import statistics
 from scipy import stats 
 
 
-exec(open("set_calibration_values.py").read())
+exec(open("set_user_values.py").read())
+
+# A class defining an object that stores axes limits for
+# pyplot displays
+class AxesLimits():
+    def __init__(self, xstart, xend, ystart, yend):
+        self.xstart = xstart
+        self.xend = xend
+        self.ystart = ystart
+        self.yend = yend
 
 # A function to set a pair of draggle points on an interactive trace plot
 # RETURNS
@@ -24,7 +33,8 @@ exec(open("set_calibration_values.py").read())
 #       mean -- mean strain measurement value between two marked points
 #       markers -- dataframe of marker information, including start and end index on the trace
 #       isGood -- boolean confirmation that the plot wasn't closed before both points were marked
-def getTracePointPair(category, markers=None):
+#       newAxesLimits -- 
+def getTracePointPair(category, markers=None, axesLimits=None):
 
     # Print a message
     print("Add {category} start point, then press enter.".format(category=category))
@@ -33,7 +43,12 @@ def getTracePointPair(category, markers=None):
     # Shows the trace from the globally-defined data
     pyplot.ion()
     fig, ax = pyplot.subplots()
+    fig.set_size_inches((default_figure_width, default_figure_height)) 
     ax.plot(data.loc[:,"Measure"])
+
+    if (axesLimits is not None):
+        ax.set_xlim(left=axesLimits.xstart, right=axesLimits.xend)
+        ax.set_ylim(bottom=axesLimits.ystart, top=axesLimits.yend)
 
     if (markers is not None):
         # Add any previous markers
@@ -54,6 +69,12 @@ def getTracePointPair(category, markers=None):
     measures = data.loc[index_start:index_end,"Measure"]
     mean = statistics.mean(measures)
 
+    # Extract the axes limits for the final interactive plot view
+    # in case the user wants to use those limits to restore the view on the next plot
+    endView_xstart, endView_xend = ax.get_xlim()
+    endView_ystart, endView_yend = ax.get_ylim()
+    newAxesLimits = AxesLimits(endView_xstart, endView_xend, endView_ystart, endView_yend)
+
     # Confirm the plot was not exited before both points were marked
     isGood = dm.isGood
 
@@ -70,7 +91,7 @@ def getTracePointPair(category, markers=None):
                                 "Measure":[data.loc[index_start,"Measure"], data.loc[index_end,"Measure"]]})
     markers = markers.set_index("Index")
 
-    return mean, markers, isGood
+    return mean, markers, isGood, newAxesLimits
 
 # A function to plot all markers from a markers dataframe on the current pyplot viewer
 #   (to be used for the markers dataframe as returned by getTracePointPair)
@@ -137,17 +158,13 @@ class DraggableMarker():
         
     def update(self, event):
         try:        
-            for i, line in enumerate(self.lines):
-                # foolish way to do this, but keeps it flexible in case
-                # the code needs to be adapted for multiple lines
-                if (i>0):
-                    continue
-                x,y = self.get_closest(line, event.xdata) 
-                self.tx[i].set_position((x,y))
-                self.tx[i].set_text(self.buttonClasses[self.buttonClassIndex])
-                self.marker[i].set_data([x],[y])
-                self.currX = x
-                self.currY = y
+            line = self.lines[0]
+            x,y = self.get_closest(line, event.xdata) 
+            self.tx[0].set_position((x,y))
+            self.tx[0].set_text(self.buttonClasses[self.buttonClassIndex])
+            self.marker[0].set_data([x],[y])
+            self.currX = x
+            self.currY = y
         except TypeError:
             pass
 
@@ -166,6 +183,15 @@ class DraggableMarker():
         elif(event.key == 'p'):
             self.isPanning = not self.isPanning
             self.isZooming = False
+        elif(event.key == 't'):
+            # A custom re-zoom, now that 'r' goes to 
+            # the opening view (which might be retained from a previous view)
+            line = self.lines[0]
+            full_xstart = min(line.get_xdata())
+            full_xend = max(line.get_xdata())
+            full_ystart = min(line.get_ydata())
+            full_yend = max(line.get_ydata())
+            self.ax.axis(xmin=full_xstart, xmax=full_xend, ymin=full_ystart, ymax=full_yend)
         elif (event.key == 'enter'):
             if(self.buttonClassIndex==0):
                 self.ax.plot([self.currX],[self.currY], marker="o", color="yellow")
@@ -212,28 +238,29 @@ print("Working with data ending on {date} in burrow {burrow}.".format(date=data_
 #
 print("""
 Displaying M.O.M. data from {ipath}.
-Press 'r' to reset view.
+Press 'r' to reset view to starting view.
+Press 't' to reset view to data limits.
 Press 'o' to rectangle zoom.
 Press 'p' to pan.
 Press 'q' to quit program.
 """.format(ipath=user_INPATH))
 
 # Add baselines
-baseline_mean, baseline_markers, baselineGood = getTracePointPair("Baseline")
-markers = baseline_markers
+baseline_cal_mean, baseline_cal_markers, baseline_cal_Good, axesLimits = getTracePointPair("Baseline")
+markers = baseline_cal_markers
 
 # Add calibrations as separate pairs of points
-cal1_mean, cal1_markers, cal1Good = getTracePointPair("Cal1[{}]".format(cal1_value), markers)
+cal1_mean, cal1_markers, cal1_Good, axesLimits = getTracePointPair("Cal1[{}]".format(cal1_value), markers, axesLimits)
 markers = pandas.concat([markers, cal1_markers])
 
-cal2_mean, cal2_markers, cal2Good = getTracePointPair("Cal2[{}]".format(cal2_value), markers)
+cal2_mean, cal2_markers, cal2_Good, axesLimits = getTracePointPair("Cal2[{}]".format(cal2_value), markers, axesLimits)
 markers = pandas.concat([markers, cal2_markers])
 
-cal3_mean, cal3_markers, cal3Good = getTracePointPair("Cal3[{}]".format(cal3_value), markers)
+cal3_mean, cal3_markers, cal3_Good, axesLimits = getTracePointPair("Cal3[{}]".format(cal3_value), markers, axesLimits)
 markers = pandas.concat([markers, cal3_markers])
 
 # Check all the calibrations were marked successfully
-if (not baselineGood or not cal1Good or not cal2Good or not cal3Good):
+if (not baseline_cal_Good or not cal1_Good or not cal2_Good or not cal3_Good):
     sys.exit("""Error! Calibration points not set well. Try again. 
                 (Did you exit out of a calibration window?)""")
 
@@ -241,7 +268,7 @@ if (not baselineGood or not cal1Good or not cal2Good or not cal3Good):
 calibrations = pandas.DataFrame({"Category":["Cal1", "Cal2", "Cal3"],
                                  "Value_True":[cal1_value, cal2_value, cal3_value],
                                  "Value_Measured":[cal1_mean, cal2_mean, cal3_mean]})
-calibrations["Value_Difference"] = abs(calibrations["Value_Measured"] - baseline_mean)
+calibrations["Value_Difference"] = abs(calibrations["Value_Measured"] - baseline_cal_mean)
 
 # Get the linear regression information across the three calibration points
 cal_gradient, cal_intercept, cal_r_value, cal_p_value, cal_std_err = stats.linregress(calibrations["Value_Difference"], calibrations["Value_True"])
@@ -272,18 +299,20 @@ pyplot.show()
 # Lists to accumulate info for different birds
 birds_datetime_starts = []
 birds_datetime_ends = []
-birds_means = []
+birds_data_means = []
+birds_cal_means = []
 birds_details = []
 
 # Allow the user to continue entering birds
 while (True):
     response = input("Would you like to enter information for a bird? (y/n)    ")
     if (response == "y"):
+        # If the user wants to a bird, first get the calibration points for that bird
+        bird_cal_mean, bird_cal_markers, bird_cal_good, bird_cal_axesLimits = getTracePointPair("Calibration[Bird]")
 
-        # If the user wants to enter another bird, get the pair of points spanning the measure
-        bird_mean, bird_markers, bird_good = getTracePointPair("Bird")
-        measure_start = bird_markers[bird_markers["Point"]=="Start"].Datetime.iloc[0]
-        measure_end = bird_markers[bird_markers["Point"]=="End"].Datetime.iloc[0]
+        bird_data_mean, bird_data_markers, bird_data_good, bird_data_axesLimits = getTracePointPair("Bird Data", bird_cal_markers, bird_cal_axesLimits)
+        measure_start = bird_data_markers[bird_data_markers["Point"]=="Start"].Datetime.iloc[0]
+        measure_end = bird_data_markers[bird_data_markers["Point"]=="End"].Datetime.iloc[0]
 
         # Allow the user to input extra details for a "Notes" column
         details = input("Enter any details about the bird:      ")
@@ -291,7 +320,9 @@ while (True):
         # Add the info about this bird to the accumulating lists
         birds_datetime_starts.append(measure_start)
         birds_datetime_ends.append(measure_end)
-        birds_means.append(bird_mean)
+        birds_data_means.append(bird_data_mean)
+        birds_cal_means.append(bird_cal_mean)
+        birds_details.append(details)
     elif(response == "n"):
         # Carry on if the user doesn't want more info
         break
@@ -301,7 +332,8 @@ birds = pandas.DataFrame({"Burrow":user_BURROW,
                           "Date":data_DATE,
                           "Datetime_Measure_Start":birds_datetime_starts,
                           "Datetime_Measure_End":birds_datetime_ends,
-                          "Mean_Strain_Value":birds_means,
+                          "Mean_Data_Strain":birds_data_means,
+                          "Mean_Calibration_Strain":birds_cal_means,
                           "Details":details})
 
 # Convert the Datetime columns back to character strings for exporting
@@ -309,7 +341,7 @@ birds["Datetime_Measure_Start"] = birds["Datetime_Measure_Start"].dt.strftime("%
 birds["Datetime_Measure_End"] = birds["Datetime_Measure_End"].dt.strftime("%Y-%m-%d %H:%M:%S")
 
 # Calculate the baseline and regressed mass estimates for the birds
-birds["Baseline_Difference"] = abs(birds["Mean_Strain_Value"] - baseline_mean) 
+birds["Baseline_Difference"] = abs(birds["Mean_Data_Strain"] - birds["Mean_Calibration_Strain"]) 
 birds["Regression_Mass"] = birds["Baseline_Difference"] * cal_gradient + cal_intercept
 print("Bird entries complete.")
 
@@ -326,10 +358,10 @@ with open(path_summary, 'w') as f:
     f.write("M.O.M. Results\n")
     f.write("Burrow: {burrow}\n".format(burrow=user_BURROW))
     f.write("Deployment date: {date}\n".format(date=data_DATE))
-    f.write("Number of birds recorded: {numBirds}\n".format(numBirds=len(birds_means)))
+    f.write("Number of birds recorded: {numBirds}\n".format(numBirds=len(birds_data_means)))
     f.write("\n\n\nCalibration details:\n")
     f.write(calibrations.to_csv(sep="\t", index=False))
-    f.write("\nCalibration regression\nR^2={r}, Intercept={i}, Slope={s})".format(r=round(cal_r_squared,5), i=round(cal_intercept,5), s=round(cal_gradient,5)))
+    f.write("\nCalibration regression\nR^2={r}, Intercept={i}, Slope={s}".format(r=round(cal_r_squared,5), i=round(cal_intercept,5), s=round(cal_gradient,5)))
     f.write("\n\n\n")
     f.write("Summary details:\n")
     f.write(summaryDetails)
@@ -340,7 +372,7 @@ print("Wrote summary details, including calibration info, to\n\t\t{spath}".forma
 # Export bird info (if any was added)
 path_bird = "Burrow_{burrow}_{date}_BIRDS.txt".format(burrow=user_BURROW, date=data_DATE)
 
-if (len(birds_means) > 0):
+if (len(birds_data_means) > 0):
     birds.to_csv(path_bird, index=False)
     print("Wrote bird details to\n\t\t{bpath}".format(bpath=path_bird))
 else:
