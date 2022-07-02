@@ -15,6 +15,9 @@ import numpy as np
 import statistics
 from scipy import stats 
 
+
+exec(open("set_calibration_values.py").read())
+
 # A function to set a pair of draggle points on an interactive trace plot
 # RETURNS
 #       mean, markers, isGood
@@ -31,6 +34,7 @@ def getTracePointPair(category, markers=None):
     pyplot.ion()
     fig, ax = pyplot.subplots()
     ax.plot(data.loc[:,"Measure"])
+
     if (markers is not None):
         # Add any previous markers
         annotateCurrentMarkers(markers)
@@ -40,7 +44,6 @@ def getTracePointPair(category, markers=None):
 
     pyplot.show(block=True)
 
-    # When the plot is closed, turn off interactive viewer
     pyplot.ioff()
 
     # Gather the marked points data
@@ -173,7 +176,6 @@ class DraggableMarker():
                 self.index_end = self.currX
                 self.isGood = True
                 pyplot.close()
-
             self.update(event)
 #        
 # START RUNNING SCRIPT
@@ -210,9 +212,9 @@ print("Working with data ending on {date} in burrow {burrow}.".format(date=data_
 #
 print("""
 Displaying M.O.M. data from {ipath}.
-Press 'o' to activate.
 Press 'r' to reset view.
-Press 'p' to pan/zoom.
+Press 'o' to rectangle zoom.
+Press 'p' to pan.
 Press 'q' to quit program.
 """.format(ipath=user_INPATH))
 
@@ -221,13 +223,13 @@ baseline_mean, baseline_markers, baselineGood = getTracePointPair("Baseline")
 markers = baseline_markers
 
 # Add calibrations as separate pairs of points
-cal1_mean, cal1_markers, cal1Good = getTracePointPair("Cal1[23.6g]", markers)
+cal1_mean, cal1_markers, cal1Good = getTracePointPair("Cal1[{}]".format(cal1_value), markers)
 markers = pandas.concat([markers, cal1_markers])
 
-cal2_mean, cal2_markers, cal2Good = getTracePointPair("Cal2[50g]", markers)
+cal2_mean, cal2_markers, cal2Good = getTracePointPair("Cal2[{}]".format(cal2_value), markers)
 markers = pandas.concat([markers, cal2_markers])
 
-cal3_mean, cal3_markers, cal3Good = getTracePointPair("Cal3[65.3g]", markers)
+cal3_mean, cal3_markers, cal3Good = getTracePointPair("Cal3[{}]".format(cal3_value), markers)
 markers = pandas.concat([markers, cal3_markers])
 
 # Check all the calibrations were marked successfully
@@ -237,7 +239,7 @@ if (not baselineGood or not cal1Good or not cal2Good or not cal3Good):
 
 # Clean up the marked calibration points data
 calibrations = pandas.DataFrame({"Category":["Cal1", "Cal2", "Cal3"],
-                                 "Value_True":[23.6, 50, 65.3],
+                                 "Value_True":[cal1_value, cal2_value, cal3_value],
                                  "Value_Measured":[cal1_mean, cal2_mean, cal3_mean]})
 calibrations["Value_Difference"] = abs(calibrations["Value_Measured"] - baseline_mean)
 
