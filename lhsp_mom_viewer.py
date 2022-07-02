@@ -317,14 +317,14 @@ while (True):
         measure_end = bird_data_markers[bird_data_markers["Point"]=="End"].Datetime.iloc[0]
 
         # Allow the user to input extra details for a "Notes" column
-        details = input("Enter any details about the bird:      ")
+        bird_details = input("Enter any details about the bird:      ")
 
         # Add the info about this bird to the accumulating lists
         birds_datetime_starts.append(measure_start)
         birds_datetime_ends.append(measure_end)
         birds_data_means.append(bird_data_mean)
         birds_cal_means.append(bird_cal_mean)
-        birds_details.append(birds_details)
+        birds_details.append(bird_details)
     elif(response == "n"):
         # Carry on if the user doesn't want more info
         break
