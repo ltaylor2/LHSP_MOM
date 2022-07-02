@@ -35,7 +35,7 @@ class AxesLimits():
 #       mean -- mean strain measurement value between two marked points
 #       markers -- dataframe of marker information, including start and end index on the trace
 #       isGood -- boolean confirmation that the plot wasn't closed before both points were marked
-#       newAxesLimits -- 
+#       newAxesLimits -- bounding box limits for the plot view that was shown right before exiting 
 def getTracePointPair(category, markers=None, axesLimits=None):
 
     # Print a message
