@@ -334,7 +334,7 @@ birds = pandas.DataFrame({"Burrow":user_BURROW,
                           "Datetime_Measure_End":birds_datetime_ends,
                           "Mean_Data_Strain":birds_data_means,
                           "Mean_Calibration_Strain":birds_cal_means,
-                          "Details":details})
+                          "Details":birds_details})
 
 # Convert the Datetime columns back to character strings for exporting
 birds["Datetime_Measure_Start"] = birds["Datetime_Measure_Start"].dt.strftime("%Y-%m-%d %H:%M:%S")
@@ -360,6 +360,7 @@ with open(path_summary, 'w') as f:
     f.write("Deployment date: {date}\n".format(date=data_DATE))
     f.write("Number of birds recorded: {numBirds}\n".format(numBirds=len(birds_data_means)))
     f.write("\n\n\nCalibration details:\n")
+    f.write("Mean value from baseline for calibration: {}\n\n".format(baseline_cal_mean))
     f.write(calibrations.to_csv(sep="\t", index=False))
     f.write("\nCalibration regression\nR^2={r}, Intercept={i}, Slope={s}".format(r=round(cal_r_squared,5), i=round(cal_intercept,5), s=round(cal_gradient,5)))
     f.write("\n\n\n")
