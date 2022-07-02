@@ -16,6 +16,8 @@ import statistics
 from scipy import stats 
 
 
+# NOTE you will need to edit the TEMPLATE_set_user_values.py file and
+#   save it as a set_user_values.py file
 exec(open("set_user_values.py").read())
 
 # A class defining an object that stores axes limits for
@@ -322,7 +324,7 @@ while (True):
         birds_datetime_ends.append(measure_end)
         birds_data_means.append(bird_data_mean)
         birds_cal_means.append(bird_cal_mean)
-        birds_details.append(details)
+        birds_details.append(birds_details)
     elif(response == "n"):
         # Carry on if the user doesn't want more info
         break
