@@ -205,6 +205,8 @@ class DraggableMarker():
                 self.isGood = True
                 pyplot.close()
             self.update(event)
+
+
 #        
 # START RUNNING SCRIPT
 #
@@ -215,10 +217,26 @@ a script for easy data entry of M.O.M. data.\n\n""")
 #
 # USER SETUP
 #
-user_INPATH = input("**Enter input file:    ")
 try:
-    data = pandas.read_csv(user_INPATH, header=None, names=["Measure", "Datetime"])
-    data["Datetime"] = pandas.to_datetime(data["Datetime"])
+    # Read in the raw data file. 
+    # NOTE we use the stronger+slower python engine to parse the file
+    #      with utf-8 encoding (the connections are liable to writing 
+    #      corrupted bytes).
+    user_INPATH = input("**Enter input file:    ")
+    data = pandas.read_csv(user_INPATH, header=None, names=["Measure", "Datetime"], 
+                           encoding="utf-8", encoding_errors="replace", on_bad_lines="skip", 
+                           engine="python")
+    data["Measure"] = pandas.to_numeric(data["Measure"], errors="coerce")
+    data["Datetime"] = pandas.to_datetime(data["Datetime"], utc=True, errors="coerce")
+
+    # We've possibly forced parsing of some malformed data
+    #   ("replace" utf-8 encoding errors in read_csv() 
+    #     and "coerce" datetime errors in to_numeric() and to_datetime()), so 
+    #   now we need to clean that up.
+    # Simply drop all points from the file where Measure has been coerced to NaN
+    #   and where Datetime has been coerced to NaT
+    data = data[~data.Measure.isnull() & ~data.Datetime.isnull()]
+
 except FileNotFoundError:
     sys.exit("Input file not found. Exiting.")
 except pandas.errors.EmptyDataError:
